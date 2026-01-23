@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Formed & Furnished Setup Assistant</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #fafafa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    #chat {
+      background: white;
+      width: 100%;
+      max-width: 480px;
+      height: 90vh;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #messages {
+      flex: 1;
+      padding: 16px;
+      overflow-y: auto;
+    }
+    .msg {
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+    .user { font-weight: 600; }
+    #input {
+      display: flex;
+      border-top: 1px solid #eee;
+    }
+    input {
+      flex: 1;
+      border: none;
+      padding: 14px;
+      font-size: 16px;
+    }
+    button {
+      border: none;
+      background: black;
+      color: white;
+      padding: 0 18px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+<div id="chat">
+  <div id="messages"></div>
+  <div id="input">
+    <input id="q" placeholder="Ask about setting up your room…" />
+    <button onclick="ask()">Send</button>
+  </div>
+</div>
+
+<script>
+let guideText = "";
+
+async function loadDocs() {
+  const g = await fetch("Interior%20Setup%20Guide.txt").then(r => r.text());
+  const c = await fetch("Setup%20Checklist.txt").then(r => r.text());
+  guideText = g + "\n\nCHECKLIST:\n" + c;
+
+  add("assistant","Hi, I’m your Formed & Furnished setup guide. Ask me anything about arranging, installing and styling your package.");
+}
+
+function add(role, text) {
+  const d = document.createElement("div");
+  d.className = "msg";
+  d.innerHTML = role === "user" ? `<span class="user">You:</span> ${text}` : text;
+  messages.appendChild(d);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+async function ask() {
+  const q = document.getElementById("q");
+  const question = q.value.trim();
+  if (!question) return;
+  add("user", question);
+  q.value = "";
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer YOUR_OPENAI_API_KEY"
+    },
+    body: JSON.stringify({
+      model: "gpt-4.1-mini",
+      messages: [
+        { role: "system", content: "You are an interior setup assistant helping customers who already purchased a Formed & Furnished package. Only answer using the provided guide and checklist." },
+        { role: "system", content: guideText },
+        { role: "user", content: question }
+      ]
+    })
+  });
+
+  const data = await res.json();
+  add("assistant", data.choices[0].message.content);
+}
+
+loadDocs();
+</script>
+</body>
+</html>
